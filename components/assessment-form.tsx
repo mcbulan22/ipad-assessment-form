@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, CheckCircle, AlertCircle, FileText, User, Eye, Lock, EyeOff } from "lucide-react"
+import { Loader2, CheckCircle, AlertCircle, FileText, User, Eye, Lock, EyeOff, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AssessmentForm() {
@@ -65,6 +65,18 @@ export default function AssessmentForm() {
     const sheet = markingSheets.find((s) => s.id === sheetId)
     console.log("Selected sheet:", sheet)
     setSelectedSheet(sheet || null)
+    setIsSheetUnlocked(false)
+    setSheetPassword("")
+    setChecklistResponses({})
+    setSubmitStatus("idle")
+    setAssessmentResults(null)
+    setStudentSignature("")
+    setAssessorSignature("")
+    setError(null)
+  }
+
+  const handleChangeMarkingSheet = () => {
+    setSelectedSheet(null)
     setIsSheetUnlocked(false)
     setSheetPassword("")
     setChecklistResponses({})
@@ -521,16 +533,7 @@ export default function AssessmentForm() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedSheet(null)
-                      setSheetPassword("")
-                      setError(null)
-                    }}
-                    className="flex-1"
-                  >
+                  <Button type="button" variant="outline" onClick={handleChangeMarkingSheet} className="flex-1">
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isVerifyingPassword} className="flex-1">
@@ -556,9 +559,28 @@ export default function AssessmentForm() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Enhanced Header with Logo and Branding */}
         <Card className="shadow-lg">
-          <CardHeader className="bg-blue-600 text-white rounded-t-lg">
-            <CardTitle className="text-2xl font-bold text-center">Student Assessment Form</CardTitle>
+          <CardHeader className="bg-gradient-to-r from-blue-800 to-blue-600 text-white rounded-t-lg">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4">
+              {/* Logo and Institution Info */}
+              <div className="flex items-center gap-6">
+                <div className="bg-white p-3 rounded-full shadow-lg">
+                  <img src="/images/maap-logo-blue.png" alt="MAAP Logo" className="h-16 w-16 object-contain" />
+                </div>
+                <div className="text-center md:text-left">
+                  <h1 className="text-2xl md:text-3xl font-bold">CCA SEAForm</h1>
+                  <p className="text-blue-100 text-sm md:text-base">Maritime Academy of Asia and the Pacific</p>
+                </div>
+              </div>
+
+              {/* Version and Contact Info */}
+              <div className="text-center md:text-right text-sm text-blue-100 space-y-1">
+                <div className="bg-blue-700/50 px-3 py-2 rounded-lg backdrop-blur-sm">
+                  <p className="font-semibold text-white">Version 1.1</p>
+                </div>
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent className="p-6 space-y-6">
@@ -582,27 +604,49 @@ export default function AssessmentForm() {
                 <Label htmlFor="marking-sheet" className="text-lg font-semibold">
                   Select Marking Sheet *
                 </Label>
-                <Select onValueChange={handleSheetSelection}>
-                  <SelectTrigger className="h-12 text-base">
-                    <SelectValue placeholder="Choose a marking sheet..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {markingSheets.length === 0 ? (
-                      <SelectItem value="no-sheets" disabled>
-                        No marking sheets available
-                      </SelectItem>
-                    ) : (
-                      markingSheets.map((sheet) => (
-                        <SelectItem key={sheet.id} value={sheet.id} className="py-3">
-                          <div className="flex items-center gap-2">
-                            <Lock className="h-4 w-4 text-gray-400" />
-                            {sheet.name}
-                          </div>
+                {selectedSheet && isSheetUnlocked ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="font-medium text-green-800">{selectedSheet.name}</span>
+                        <span className="text-sm text-green-600">(Unlocked & Ready)</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleChangeMarkingSheet}
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Select onValueChange={handleSheetSelection}>
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue placeholder="Choose a marking sheet..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {markingSheets.length === 0 ? (
+                        <SelectItem value="no-sheets" disabled>
+                          No marking sheets available
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                      ) : (
+                        markingSheets.map((sheet) => (
+                          <SelectItem key={sheet.id} value={sheet.id} className="py-3">
+                            <div className="flex items-center gap-2">
+                              <Lock className="h-4 w-4 text-gray-400" />
+                              {sheet.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
                 {markingSheets.length === 0 && (
                   <p className="text-sm text-gray-500">
                     No marking sheets are currently available. Please contact your administrator.
@@ -662,7 +706,7 @@ export default function AssessmentForm() {
 
                     <div className="space-y-2">
                       <Label htmlFor="class-name" className="text-lg font-semibold">
-                        Class/Grade *
+                        Class/Program *
                       </Label>
                       <Input
                         id="class-name"
@@ -746,6 +790,19 @@ export default function AssessmentForm() {
               )}
             </form>
           </CardContent>
+          {/* Footer */}
+          <div className="bg-gray-50 px-6 py-4 rounded-b-lg border-t">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <img src="/images/maap-logo-blue.png" alt="MAAP Logo" className="h-6 w-6 object-contain" />
+                <span>© 2025 Maritime Academy of Asia and the Pacific</span>
+              </div>
+              <div className="text-center md:text-right">
+                <p>CCA Skills Evaluation and Assessment Form v1.1</p>
+                <p className="text-xs">For technical support: cca@maap.edu.ph | Tel: 4085</p>
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
     </div>
