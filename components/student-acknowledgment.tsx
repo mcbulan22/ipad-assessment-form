@@ -44,6 +44,18 @@ export default function StudentAcknowledgment({ assessmentId }: StudentAcknowled
     }
   }
 
+  const getClientIP = async (): Promise<string> => {
+    try {
+      // Try to get IP from a public service
+      const response = await fetch("https://api.ipify.org?format=json")
+      const data = await response.json()
+      return data.ip || "unknown"
+    } catch (error) {
+      console.log("Could not fetch IP address:", error)
+      return "unknown"
+    }
+  }
+
   const handleAcknowledge = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -58,12 +70,12 @@ export default function StudentAcknowledgment({ assessmentId }: StudentAcknowled
     setError(null)
 
     try {
+      const clientIP = await getClientIP()
+
       await acknowledgeAssessment(assessment.id!, {
         assessment_id: assessment.id!,
         student_signature: signature.trim(),
-        ip_address: await fetch("/api/ip")
-          .then((r) => r.text())
-          .catch(() => ""),
+        ip_address: clientIP,
         user_agent: navigator.userAgent,
       })
 
@@ -168,11 +180,11 @@ export default function StudentAcknowledgment({ assessmentId }: StudentAcknowled
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-700">{assessment.total_score}</div>
+                <div className="text-2xl font-bold text-blue-700">{assessment.total_score || 0}</div>
                 <div className="text-sm text-blue-600">Points Earned</div>
               </div>
               <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-700">{assessment.max_possible_score}</div>
+                <div className="text-2xl font-bold text-gray-700">{assessment.max_possible_score || 0}</div>
                 <div className="text-sm text-gray-600">Total Points</div>
               </div>
               <div
@@ -181,7 +193,7 @@ export default function StudentAcknowledgment({ assessmentId }: StudentAcknowled
                 <div
                   className={`text-2xl font-bold ${assessment.status === "passed" ? "text-green-700" : "text-red-700"}`}
                 >
-                  {assessment.percentage_score}%
+                  {assessment.percentage_score || 0}%
                 </div>
                 <div className={`text-sm ${assessment.status === "passed" ? "text-green-600" : "text-red-600"}`}>
                   Final Score
@@ -193,7 +205,7 @@ export default function StudentAcknowledgment({ assessmentId }: StudentAcknowled
 
             <div>
               <Label className="font-semibold">Remarks</Label>
-              <p className="mt-1 p-3 bg-gray-50 rounded-lg">{assessment.remarks}</p>
+              <p className="mt-1 p-3 bg-gray-50 rounded-lg">{assessment.remarks || "No remarks provided"}</p>
             </div>
           </CardContent>
         </Card>
@@ -229,6 +241,20 @@ export default function StudentAcknowledgment({ assessmentId }: StudentAcknowled
             </CardContent>
           </Card>
         )}
+
+        {/* Navigation */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Button variant="outline" onClick={() => router.push("/")} className="mr-4">
+                Back to Assessment Form
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/assessments")}>
+                View All Assessments
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
