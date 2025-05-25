@@ -49,7 +49,7 @@ export default function AdminDashboard() {
   const fetchMarkingSheets = async () => {
     try {
       setIsLoading(true)
-      const sheets = await getMarkingSheets()
+      const sheets = await getMarkingSheets(true) // Include disabled sheets for admin
       setMarkingSheets(sheets)
     } catch (err: any) {
       setError(err.message || "Failed to fetch marking sheets")
@@ -175,7 +175,16 @@ export default function AdminDashboard() {
               <Card key={sheet.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>{sheet.name}</CardTitle>
+                    <div className="flex items-center gap-3">
+                      <CardTitle>{sheet.name}</CardTitle>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          sheet.is_enabled ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {sheet.is_enabled ? "Enabled" : "Disabled"}
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => setEditingSheet(sheet)}>
                         <Edit className="h-4 w-4" />
@@ -188,7 +197,10 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600 mb-2">{sheet.description}</p>
-                  <p className="text-sm text-gray-500">{sheet.checklist_items?.length || 0} checklist items</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-500">{sheet.checklist_items?.length || 0} checklist items</p>
+                    <p className="text-sm text-gray-500">Password protected</p>
+                  </div>
                 </CardContent>
               </Card>
             ))}

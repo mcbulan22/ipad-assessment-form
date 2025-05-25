@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, Home } from "lucide-react"
+import Link from "next/link"
 
 export default function LoginForm() {
   const [email, setEmail] = useState("")
@@ -39,7 +40,18 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="flex items-center justify-between">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="p-2">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Assessment
+              </Button>
+            </Link>
+          </div>
           <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
+          <p className="text-center text-sm text-gray-600">
+            Access admin panel to manage marking sheets and view assessments
+          </p>
         </CardHeader>
         <CardContent>
           {error && (
@@ -85,6 +97,15 @@ export default function LoginForm() {
               )}
             </Button>
           </form>
+
+          <div className="mt-6 pt-4 border-t text-center">
+            <Link href="/">
+              <Button variant="outline" className="w-full">
+                <Home className="mr-2 h-4 w-4" />
+                Go to Assessment Form
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

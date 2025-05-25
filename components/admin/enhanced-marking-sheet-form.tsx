@@ -28,6 +28,8 @@ interface EnhancedMarkingSheetFormProps {
     name: string
     description?: string
     passing_score: number
+    password?: string
+    is_enabled?: boolean
     checklist_items: ChecklistItemForm[]
   }) => Promise<void>
   onCancel: () => void
@@ -43,6 +45,8 @@ export default function EnhancedMarkingSheetForm({
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
   const [passingScore, setPassingScore] = useState(initialData?.passing_score || 70)
+  const [password, setPassword] = useState(initialData?.password || "assess2024")
+  const [isEnabled, setIsEnabled] = useState(initialData?.is_enabled ?? true)
   const [checklistItems, setChecklistItems] = useState<ChecklistItemForm[]>(
     initialData?.checklist_items?.map((item, index) => ({
       text: item.text,
@@ -94,6 +98,8 @@ export default function EnhancedMarkingSheetForm({
       name,
       description,
       passing_score: passingScore,
+      password,
+      is_enabled: isEnabled,
       checklist_items: checklistItems.filter((item) => item.text.trim()),
     })
   }
@@ -109,7 +115,7 @@ export default function EnhancedMarkingSheetForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -134,20 +140,42 @@ export default function EnhancedMarkingSheetForm({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="password">Access Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Total Points</Label>
               <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center">{totalPoints} points</div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Assessment description"
-              rows={3}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Assessment description"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Marking Sheet Status</Label>
+              <div className="flex items-center space-x-2 h-10">
+                <Checkbox checked={isEnabled} onCheckedChange={(checked) => setIsEnabled(checked as boolean)} />
+                <span className="text-sm">
+                  {isEnabled ? "Enabled (visible to assessors)" : "Disabled (hidden from assessors)"}
+                </span>
+              </div>
+            </div>
           </div>
 
           <Separator />
