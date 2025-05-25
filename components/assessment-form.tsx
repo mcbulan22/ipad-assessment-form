@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Loader2, CheckCircle, AlertCircle, FileText, User, Eye } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AssessmentForm() {
@@ -23,8 +23,11 @@ export default function AssessmentForm() {
   const [checklistResponses, setChecklistResponses] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "preview" | "success" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
+  const [assessmentResults, setAssessmentResults] = useState<any>(null)
+  const [studentSignature, setStudentSignature] = useState("")
+  const [assessorSignature, setAssessorSignature] = useState("")
 
   // Fetch marking sheets on component mount
   useEffect(() => {
@@ -50,6 +53,9 @@ export default function AssessmentForm() {
     setSelectedSheet(sheet || null)
     setChecklistResponses({})
     setSubmitStatus("idle")
+    setAssessmentResults(null)
+    setStudentSignature("")
+    setAssessorSignature("")
   }
 
   const handleChecklistChange = (itemId: string, checked: boolean) => {
@@ -59,7 +65,7 @@ export default function AssessmentForm() {
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePreviewResults = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!selectedSheet || !studentName.trim() || !assessorName.trim()) {
@@ -67,20 +73,20 @@ export default function AssessmentForm() {
       return
     }
 
-    setIsSubmitting(true)
     setError(null)
 
     try {
-      // Calculate scoring with new function
+      // Calculate scoring
       const scoreResult = calculateAssessmentScore(
         selectedSheet.checklist_items || [],
         checklistResponses,
         selectedSheet.passing_score || 70,
       )
 
-      const assessmentData: Omit<Assessment, "id" | "created_at" | "updated_at"> = {
+      const results = {
         student_name: studentName.trim(),
         assessor_name: assessorName.trim(),
+        marking_sheet_name: selectedSheet.name,
         marking_sheet_id: selectedSheet.id,
         checklist_responses,
         total_items: selectedSheet.checklist_items?.length || 0,
@@ -96,6 +102,43 @@ export default function AssessmentForm() {
         percentage_score: scoreResult.percentageScore,
         status: scoreResult.status,
         remarks: scoreResult.remarks,
+        assessment_date: new Date().toLocaleDateString(),
+      }
+
+      setAssessmentResults(results)
+      setSubmitStatus("preview")
+    } catch (err) {
+      setError("Failed to calculate results. Please try again.")
+      console.error("Error calculating results:", err)
+    }
+  }
+
+  const handleFinalSubmit = async () => {
+    if (!assessmentResults || !studentSignature.trim() || !assessorSignature.trim()) {
+      setError("Both student and assessor signatures are required")
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const assessmentData: Omit<Assessment, "id" | "created_at" | "updated_at"> = {
+        student_name: assessmentResults.student_name,
+        assessor_name: assessmentResults.assessor_name,
+        marking_sheet_id: assessmentResults.marking_sheet_id,
+        checklist_responses: assessmentResults.checklist_responses,
+        total_items: assessmentResults.total_items,
+        completed_items: assessmentResults.completed_items,
+        completion_percentage: assessmentResults.completion_percentage,
+        total_score: assessmentResults.total_score,
+        max_possible_score: assessmentResults.max_possible_score,
+        percentage_score: assessmentResults.percentage_score,
+        status: assessmentResults.status,
+        remarks: assessmentResults.remarks,
+        // Mark as immediately acknowledged with both signatures
+        acknowledged_at: new Date().toISOString(),
+        acknowledged_by: `Student: ${studentSignature.trim()} | Assessor: ${assessorSignature.trim()}`,
       }
 
       const result = await submitAssessment(assessmentData)
@@ -109,6 +152,9 @@ export default function AssessmentForm() {
         setAssessorName("")
         setSelectedSheet(null)
         setChecklistResponses({})
+        setAssessmentResults(null)
+        setStudentSignature("")
+        setAssessorSignature("")
         setSubmitStatus("idle")
       }, 3000)
     } catch (err) {
@@ -118,6 +164,14 @@ export default function AssessmentForm() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleBackToEdit = () => {
+    setSubmitStatus("idle")
+    setAssessmentResults(null)
+    setStudentSignature("")
+    setAssessorSignature("")
+    setError(null)
   }
 
   const groupedItems =
@@ -142,6 +196,180 @@ export default function AssessmentForm() {
     )
   }
 
+  // Results Preview Screen
+  if (submitStatus === "preview" && assessmentResults) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header */}
+          <Card>
+            <CardHeader className="text-center bg-blue-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl">Assessment Results Preview</CardTitle>
+              <p>Please show this to the student for review and signatures</p>
+            </CardHeader>
+          </Card>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Assessment Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Assessment Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-semibold">Student Name</Label>
+                  <p className="text-lg">{assessmentResults.student_name}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Assessor</Label>
+                  <p className="text-lg">{assessmentResults.assessor_name}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Assessment Date</Label>
+                  <p>{assessmentResults.assessment_date}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Marking Sheet</Label>
+                  <p>{assessmentResults.marking_sheet_name}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Score Results */}
+          <Card>
+            <CardHeader>
+              <CardTitle
+                className={`flex items-center gap-2 ${
+                  assessmentResults.status === "passed" ? "text-green-700" : "text-red-700"
+                }`}
+              >
+                {assessmentResults.status === "passed" ? (
+                  <CheckCircle className="h-5 w-5" />
+                ) : (
+                  <AlertCircle className="h-5 w-5" />
+                )}
+                Assessment Result: {assessmentResults.status?.toUpperCase()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-700">{assessmentResults.total_score}</div>
+                  <div className="text-sm text-blue-600">Points Earned</div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-700">{assessmentResults.max_possible_score}</div>
+                  <div className="text-sm text-gray-600">Total Points</div>
+                </div>
+                <div
+                  className={`text-center p-4 rounded-lg ${
+                    assessmentResults.status === "passed" ? "bg-green-50" : "bg-red-50"
+                  }`}
+                >
+                  <div
+                    className={`text-2xl font-bold ${
+                      assessmentResults.status === "passed" ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {assessmentResults.percentage_score}%
+                  </div>
+                  <div
+                    className={`text-sm ${assessmentResults.status === "passed" ? "text-green-600" : "text-red-600"}`}
+                  >
+                    Final Score
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label className="font-semibold">Remarks</Label>
+                <p className="mt-1 p-3 bg-gray-50 rounded-lg">{assessmentResults.remarks}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Signatures */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Acknowledgment Signatures
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="student-signature">
+                    Student Signature *
+                    <span className="text-sm text-gray-500 block">
+                      Student acknowledges reviewing the assessment results
+                    </span>
+                  </Label>
+                  <Input
+                    id="student-signature"
+                    value={studentSignature}
+                    onChange={(e) => setStudentSignature(e.target.value)}
+                    placeholder="Student types full name here"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assessor-signature">
+                    Assessor Signature *
+                    <span className="text-sm text-gray-500 block">Assessor confirms the assessment results</span>
+                  </Label>
+                  <Input
+                    id="assessor-signature"
+                    value={assessorSignature}
+                    onChange={(e) => setAssessorSignature(e.target.value)}
+                    placeholder="Assessor types full name here"
+                    required
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={handleBackToEdit} className="flex-1">
+              Back to Edit Assessment
+            </Button>
+            <Button
+              onClick={handleFinalSubmit}
+              disabled={!studentSignature.trim() || !assessorSignature.trim() || isSubmitting}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Assessment"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Main Assessment Form
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
@@ -165,7 +393,7 @@ export default function AssessmentForm() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handlePreviewResults} className="space-y-6">
               {/* Marking Sheet Selection */}
               <div className="space-y-2">
                 <Label htmlFor="marking-sheet" className="text-lg font-semibold">
@@ -264,21 +492,15 @@ export default function AssessmentForm() {
                 </div>
               )}
 
-              {/* Submit Button */}
+              {/* Preview Results Button */}
               <div className="pt-6">
                 <Button
                   type="submit"
-                  disabled={!selectedSheet || !studentName.trim() || !assessorName.trim() || isSubmitting}
+                  disabled={!selectedSheet || !studentName.trim() || !assessorName.trim()}
                   className="w-full h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Submitting Assessment...
-                    </>
-                  ) : (
-                    "Submit Assessment"
-                  )}
+                  <Eye className="mr-2 h-5 w-5" />
+                  Preview Results & Get Signatures
                 </Button>
               </div>
             </form>
