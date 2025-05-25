@@ -35,11 +35,13 @@ export default function AssessmentForm() {
     try {
       setIsLoading(true)
       setError(null)
+      console.log("Fetching marking sheets...")
       const sheets = await getMarkingSheets()
+      console.log("Fetched marking sheets:", sheets)
       setMarkingSheets(sheets)
     } catch (err) {
-      setError("Failed to fetch marking sheets. Please check your connection.")
       console.error("Error fetching marking sheets:", err)
+      setError("Failed to fetch marking sheets. Please check your connection.")
     } finally {
       setIsLoading(false)
     }
@@ -47,16 +49,22 @@ export default function AssessmentForm() {
 
   const handleSheetSelection = (sheetId: string) => {
     const sheet = markingSheets.find((s) => s.id === sheetId)
+    console.log("Selected sheet:", sheet)
     setSelectedSheet(sheet || null)
     setChecklistResponses({})
     setSubmitStatus("idle")
+    setError(null)
   }
 
   const handleChecklistChange = (itemId: string, checked: boolean) => {
-    setChecklistResponses((prev) => ({
-      ...prev,
-      [itemId]: checked,
-    }))
+    setChecklistResponses((prev) => {
+      const updated = {
+        ...prev,
+        [itemId]: checked,
+      }
+      console.log("Updated checklist responses:", updated)
+      return updated
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,35 +79,57 @@ export default function AssessmentForm() {
     setError(null)
 
     try {
-      // Calculate scoring with new function
-      const scoreResult = calculateAssessmentScore(
-        selectedSheet.checklist_items || [],
-        checklistResponses,
-        selectedSheet.passing_score || 70,
-      )
+      console.log("=== STARTING ASSESSMENT SUBMISSION ===")
+      console.log("Selected sheet:", selectedSheet)
+      console.log("Student name:", studentName)
+      console.log("Assessor name:", assessorName)
+      console.log("Checklist responses:", checklistResponses)
 
-      const assessmentData: Omit<Assessment, "id" | "created_at" | "updated_at"> = {
+      const checklistItems = selectedSheet.checklist_items || []
+      const totalItems = checklistItems.length
+      const completedItems = Object.values(checklistResponses).filter(Boolean).length
+      const completionPercentage = totalItems > 0 ? (completedItems / totalItems) * 100 : 0
+
+      console.log("Calculated stats:", { totalItems, completedItems, completionPercentage })
+
+      // Create the most basic assessment data that should work
+      const assessmentData = {
         student_name: studentName.trim(),
         assessor_name: assessorName.trim(),
         marking_sheet_id: selectedSheet.id,
-        checklist_responses,
-        total_items: selectedSheet.checklist_items?.length || 0,
-        completed_items: Object.values(checklistResponses).filter(Boolean).length,
-        completion_percentage:
-          Math.round(
-            (Object.values(checklistResponses).filter(Boolean).length / (selectedSheet.checklist_items?.length || 1)) *
-              100 *
-              100,
-          ) / 100,
-        total_score: scoreResult.totalScore,
-        max_possible_score: scoreResult.maxPossibleScore,
-        percentage_score: scoreResult.percentageScore,
-        status: scoreResult.status,
-        remarks: scoreResult.remarks,
+        checklist_responses: checklistResponses,
+        total_items: totalItems,
+        completed_items: completedItems,
+        completion_percentage: Math.round(completionPercentage * 100) / 100,
       }
 
-      const result = await submitAssessment(assessmentData)
-      console.log("Assessment submitted successfully:", result)
+      // Only add enhanced features if the columns exist
+      try {
+        if (checklistItems.some((item) => item.points !== undefined)) {
+          const scoreResult = calculateAssessmentScore(
+            checklistItems,
+            checklistResponses,
+            selectedSheet.passing_score || 70,
+          )
+          console.log("Score result:", scoreResult)
+
+          // Add scoring data
+          Object.assign(assessmentData, {
+            total_score: scoreResult.totalScore,
+            max_possible_score: scoreResult.maxPossibleScore,
+            percentage_score: scoreResult.percentageScore,
+            status: scoreResult.status,
+            remarks: scoreResult.remarks,
+          })
+        }
+      } catch (scoringError) {
+        console.log("Scoring features not available, using basic submission:", scoringError)
+      }
+
+      console.log("Final assessment data to submit:", assessmentData)
+
+      const result = await submitAssessment(assessmentData as Omit<Assessment, "id" | "created_at" | "updated_at">)
+      console.log("=== ASSESSMENT SUBMITTED SUCCESSFULLY ===", result)
 
       setSubmitStatus("success")
 
@@ -111,10 +141,26 @@ export default function AssessmentForm() {
         setChecklistResponses({})
         setSubmitStatus("idle")
       }, 3000)
-    } catch (err) {
-      setError("Failed to submit assessment. Please try again.")
+    } catch (err: any) {
+      console.error("=== ERROR SUBMITTING ASSESSMENT ===", err)
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        details: err.details,
+        hint: err.hint,
+      })
+
+      let errorMessage = "Failed to submit assessment. "
+      if (err.code === "42501") {
+        errorMessage += "Permission denied. Please contact administrator."
+      } else if (err.message) {
+        errorMessage += err.message
+      } else {
+        errorMessage += "Please try again."
+      }
+
+      setError(errorMessage)
       setSubmitStatus("error")
-      console.error("Error submitting assessment:", err)
     } finally {
       setIsSubmitting(false)
     }
@@ -138,6 +184,21 @@ export default function AssessmentForm() {
           <Loader2 className="h-6 w-6 animate-spin" />
           <span>Loading marking sheets...</span>
         </div>
+      </div>
+    )
+  }
+
+  if (markingSheets.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Marking Sheets Available</h3>
+            <p className="text-gray-600 mb-4">Please contact an administrator to create marking sheets first.</p>
+            <Button onClick={fetchMarkingSheets}>Retry</Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -246,7 +307,9 @@ export default function AssessmentForm() {
                                   className="text-base leading-relaxed cursor-pointer flex items-center gap-2"
                                 >
                                   {item.text}
-                                  <span className="text-sm font-medium text-blue-600">({item.points || 1} pts)</span>
+                                  {item.points && (
+                                    <span className="text-sm font-medium text-blue-600">({item.points} pts)</span>
+                                  )}
                                   {item.is_critical && (
                                     <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">CRITICAL</span>
                                   )}
