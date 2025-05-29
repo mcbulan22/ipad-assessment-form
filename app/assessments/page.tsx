@@ -14,6 +14,39 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Download, ArrowLeft, Filter } from "lucide-react"
 import Link from "next/link"
 
+function parseSignatures(acknowledgedBy: string | null | undefined) {
+  if (!acknowledgedBy) return { studentSignature: null, assessorSignature: null };
+
+  // Try splitting by ' | ' or ' = | ' (depending on actual separator)
+  // You can adjust if needed
+  const parts = acknowledgedBy.split(' | ');
+
+  let studentSignature: string | null = null;
+  let assessorSignature: string | null = null;
+
+  parts.forEach((part) => {
+    part = part.trim();
+
+    if (part.startsWith('Student:')) {
+      // Remove label and trim
+      studentSignature = part.replace('Student:', '').trim();
+    } else if (part.startsWith('Assessor:')) {
+      assessorSignature = part.replace('Assessor:', '').trim();
+    }
+  });
+
+  // Optional: double-check they start with data:image/png;base64,
+  if (studentSignature && !studentSignature.startsWith('data:image/png;base64,')) {
+    studentSignature = null;
+  }
+  if (assessorSignature && !assessorSignature.startsWith('data:image/png;base64,')) {
+    assessorSignature = null;
+  }
+
+  return { studentSignature, assessorSignature };
+}
+
+
 export default function AssessmentsPage() {
   const [assessments, setAssessments] = useState<any[]>([])
   const [markingSheets, setMarkingSheets] = useState<MarkingSheet[]>([])
@@ -208,61 +241,83 @@ export default function AssessmentsPage() {
                       <TableHead>Score</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Acknowledged</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>Student Signature</TableHead>
+                      <TableHead>Assessor Signature</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {assessments.map((assessment) => (
-                      <TableRow key={assessment.id}>
-                        <TableCell className="font-medium">{assessment.student_name}</TableCell>
-                        <TableCell>{assessment.assessor_name}</TableCell>
-                        <TableCell>{assessment.marking_sheets?.name || "Unknown"}</TableCell>
-                        <TableCell>{new Date(assessment.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>
-                              {assessment.total_score}/{assessment.max_possible_score}
-                            </div>
-                            <div className="text-gray-500">({assessment.percentage_score}%)</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-1 rounded text-sm font-medium ${
-                              assessment.status === "passed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {assessment.status?.toUpperCase()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {assessment.acknowledged_at ? (
-                            <span className="text-green-600 text-sm">✓ Acknowledged</span>
-                          ) : (
-                            <span className="text-gray-500 text-sm">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const url = `${window.location.origin}/acknowledge/${assessment.id}`
-                              navigator.clipboard.writeText(url)
-                              alert("Acknowledgment link copied to clipboard!")
-                            }}
-                          >
-                            Copy Link
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {assessments.map((assessment) => {
+                      const { studentSignature, assessorSignature } = parseSignatures(assessment.acknowledged_by);
+
+                      console.log('Assessment', assessment.id, {
+                        studentSignature,
+                        assessorSignature,
+                      });
+
+                        return (
+                          <TableRow key={assessment.id}>
+                            <TableCell className="font-medium">{assessment.student_name}</TableCell>
+                            <TableCell>{assessment.assessor_name}</TableCell>
+                            <TableCell>{assessment.marking_sheets?.name || "Unknown"}</TableCell>
+                            <TableCell>{new Date(assessment.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>
+                                  {assessment.total_score}/{assessment.max_possible_score}
+                                </div>
+                                <div className="text-gray-500">({assessment.percentage_score}%)</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={`px-2 py-1 rounded text-sm font-medium ${
+                                  assessment.status === "passed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {assessment.status?.toUpperCase()}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {assessment.acknowledged_at ? (
+                                <span className="text-green-600 text-sm">✓ Acknowledged</span>
+                              ) : (
+                                <span className="text-gray-500 text-sm">Pending</span>
+                              )}
+                            </TableCell>
+
+                            {/* New columns for signatures */}
+                            <TableCell>
+                              {studentSignature ? (
+                                <img
+                                  src={studentSignature}
+                                  alt="Student Signature"
+                                  style={{ width: 120, height: 60, objectFit: 'contain', border: '1px solid #ccc', borderRadius: 4 }}
+                                />
+                              ) : (
+                                <span className="text-gray-400 text-sm">No Signature</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {assessorSignature ? (
+                                <img
+                                  src={assessorSignature}
+                                  alt="Assessor Signature"
+                                  style={{ width: 120, height: 60, objectFit: 'contain', border: '1px solid #ccc', borderRadius: 4 }}
+                                />
+                              ) : (
+                                <span className="text-gray-400 text-sm">No Signature</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                          )
+                        })}
                   </TableBody>
                 </Table>
               </div>
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   )

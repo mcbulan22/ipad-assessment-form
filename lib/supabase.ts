@@ -51,7 +51,8 @@ export type Assessment = {
 export type AssessmentAcknowledgment = {
   id?: string
   assessment_id: string
-  student_signature: string
+  student_signature_image?: string  // base64 string or image URL
+  assessor_signature_image?: string
   acknowledgment_date?: string
   ip_address?: string
   user_agent?: string

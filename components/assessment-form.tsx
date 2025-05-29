@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import React, { useRef } from 'react';
 import { useState, useEffect } from "react"
 import {
   getMarkingSheets,
@@ -19,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Loader2, CheckCircle, AlertCircle, FileText, User, Eye, Lock, EyeOff, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import SignatureCanvas from "react-signature-canvas";
 
 export default function AssessmentForm() {
   const [markingSheets, setMarkingSheets] = useState<MarkingSheet[]>([])
@@ -37,8 +39,81 @@ export default function AssessmentForm() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "preview" | "success" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
   const [assessmentResults, setAssessmentResults] = useState<any>(null)
-  const [studentSignature, setStudentSignature] = useState("")
-  const [assessorSignature, setAssessorSignature] = useState("")
+  const [studentSignature, setStudentSignature] = useState<string | null>(null);
+  const [assessorSignature, setAssessorSignature] = useState<string | null>(null);
+
+function SignatureField({
+  label,
+  description,
+  signature,
+  setSignature,
+  id,
+}: {
+  label: string;
+  description: string;
+  signature: string | null;
+  setSignature: (sig: string | null) => void;
+  id: string;
+}) {
+  const sigPadRef = useRef<SignatureCanvas>(null);
+
+  const clear = () => {
+    sigPadRef.current?.clear();
+    setSignature(null);
+  };
+
+  const handleEnd = () => {
+    if (sigPadRef.current) {
+      if (sigPadRef.current.isEmpty()) {
+        setSignature(null);
+      } else {
+        setSignature(sigPadRef.current.toDataURL("image/png"));
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>
+        {label}
+        <span className="text-sm text-gray-500 block">{description}</span>
+      </Label>
+
+      <div className="border border-gray-300 rounded-md">
+        <SignatureCanvas
+          ref={sigPadRef}
+          penColor="black"
+          canvasProps={{
+            width: 400,
+            height: 150,
+            className: "rounded-md",
+            id: id,
+          }}
+          onEnd={handleEnd}
+          backgroundColor="white"
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={clear}
+        className="text-sm text-red-600 hover:underline mt-1"
+      >
+        Clear
+      </button>
+
+      {/* Optional: preview signature image if you want */}
+      {signature && (
+        <img
+          src={signature}
+          alt={`${label} preview`}
+          className="mt-2 border border-gray-300 rounded-md w-40 h-20 object-contain"
+        />
+      )}
+    </div>
+  );
+}
+
 
   // Fetch marking sheets on component mount
   useEffect(() => {
@@ -422,38 +497,23 @@ export default function AssessmentForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="student-signature">
-                    Student Signature *
-                    <span className="text-sm text-gray-500 block">
-                      Student acknowledges reviewing the assessment results
-                    </span>
-                  </Label>
-                  <Input
-                    id="student-signature"
-                    value={studentSignature}
-                    onChange={(e) => setStudentSignature(e.target.value)}
-                    placeholder="Student types full name here"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="assessor-signature">
-                    Assessor Signature *
-                    <span className="text-sm text-gray-500 block">Assessor confirms the assessment results</span>
-                  </Label>
-                  <Input
-                    id="assessor-signature"
-                    value={assessorSignature}
-                    onChange={(e) => setAssessorSignature(e.target.value)}
-                    placeholder="Assessor types full name here"
-                    required
-                  />
-                </div>
+                <SignatureField
+                  id="student-signature"
+                  label="Student Signature *"
+                  description="Student acknowledges reviewing the assessment results"
+                  signature={studentSignature}
+                  setSignature={setStudentSignature}
+                />
+                <SignatureField
+                  id="assessor-signature"
+                  label="Assessor Signature *"
+                  description="Assessor confirms the assessment results"
+                  signature={assessorSignature}
+                  setSignature={setAssessorSignature}
+                />
               </div>
             </CardContent>
-          </Card>
+          </Card>;
 
           {/* Action Buttons */}
           <div className="flex gap-4">
