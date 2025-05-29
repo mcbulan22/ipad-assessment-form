@@ -27,7 +27,7 @@ export default function LoginForm() {
 
     try {
       await signIn(email, password)
-      router.push("/admin")
+      router.push("/assessments_instructors")
       router.refresh()
     } catch (err: any) {
       setError(err.message || "Failed to sign in")
@@ -40,9 +40,9 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
+          <CardTitle className="text-2xl text-center">Instructor Login</CardTitle>
           <p className="text-center text-sm text-gray-600">
-            Access admin panel to manage marking sheets and view assessments
+            Access instructor panel to view assessments
           </p>
         </CardHeader>
         <CardContent>

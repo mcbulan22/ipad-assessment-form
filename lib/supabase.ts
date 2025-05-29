@@ -310,8 +310,9 @@ export async function deleteMarkingSheet(id: string): Promise<void> {
 export async function getAssessments(filters?: {
   markingSheetId?: string
   startDate?: string
-  endDate?: string
   status?: string
+  assessorName?: string
+  studentName?: string
 }): Promise<Assessment[]> {
   let query = supabase
     .from("assessments")
@@ -321,7 +322,7 @@ export async function getAssessments(filters?: {
     `)
     .order("created_at", { ascending: false })
 
-  if (filters?.markingSheetId) {
+  if (filters?.markingSheetId && filters.markingSheetId !== "all") {
     query = query.eq("marking_sheet_id", filters.markingSheetId)
   }
 
@@ -329,12 +330,16 @@ export async function getAssessments(filters?: {
     query = query.gte("created_at", filters.startDate)
   }
 
-  if (filters?.endDate) {
-    query = query.lte("created_at", filters.endDate)
-  }
-
   if (filters?.status) {
     query = query.eq("status", filters.status)
+  }
+
+  if (filters?.assessorName) {
+    query = query.ilike("assessor_name", `%${filters.assessorName.trim()}%`)
+  }
+
+  if (filters?.studentName) {
+    query = query.ilike("student_name", `%${filters.studentName.trim()}%`)
   }
 
   const { data, error } = await query
@@ -346,6 +351,7 @@ export async function getAssessments(filters?: {
 
   return data || []
 }
+
 
 export async function getAssessmentById(id: string): Promise<Assessment | null> {
   const { data, error } = await supabase

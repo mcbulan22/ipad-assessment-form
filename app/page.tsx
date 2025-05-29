@@ -24,6 +24,11 @@ export default async function Page() {
               <h1 className="text-xl font-semibold">Assessment System</h1>
             </div>
             <div className="flex items-center gap-4">
+              <Link href="/login_instructor">
+                <Button variant="outline" size="sm">
+                  Instructor Login
+                </Button>
+              </Link>
               {user ? (
                 <Link href="/admin">
                   <Button variant="outline" size="sm">

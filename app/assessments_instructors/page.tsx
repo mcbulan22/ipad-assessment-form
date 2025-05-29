@@ -169,10 +169,10 @@ export default function AssessmentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/admin">
+            <Link href="/">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Admin
+                Back to Home
               </Button>
             </Link>
             <h1 className="text-3xl font-bold">Assessment Summary</h1>
