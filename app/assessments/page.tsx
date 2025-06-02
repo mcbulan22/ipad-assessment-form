@@ -199,16 +199,6 @@ export default function AssessmentsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Assessor Name */}
-              <div className="space-y-2">
-                <Label>Assessor Name</Label>
-                <Input
-                  type="text"
-                  value={filters.assessorName}
-                  onChange={(e) => setFilters({ ...filters, assessorName: e.target.value })}
-                  placeholder="e.g. Marlon Bulan"
-                />
-              </div>
 
               {/* Student Name */}
               <div className="space-y-2">
@@ -220,6 +210,19 @@ export default function AssessmentsPage() {
                   placeholder="e.g. Juan Dela Cruz"
                 />
               </div>
+
+              {/* Assessor Name */}
+              <div className="space-y-2">
+                <Label>Assessor Name</Label>
+                <Input
+                  type="text"
+                  value={filters.assessorName}
+                  onChange={(e) => setFilters({ ...filters, assessorName: e.target.value })}
+                  placeholder="e.g. Marlon Bulan"
+                />
+              </div>
+
+
 
               {/* Marking Sheet */}
               <div className="space-y-2">
