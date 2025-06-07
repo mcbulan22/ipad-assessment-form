@@ -4,6 +4,15 @@ import AssessmentForm from "@/components/assessment-form"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Settings } from "lucide-react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "CCA SEAForm",
+  description: "CCA Skills Evaluation and Assessment Form",
+  icons: {
+    icon: "https://raw.githubusercontent.com/marlonbulan/cca-assets/main/favicon.ico",
+  },
+}
 
 export default async function Page() {
   const cookieStore = await cookies()

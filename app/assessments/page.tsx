@@ -222,8 +222,6 @@ export default function AssessmentsPage() {
                 />
               </div>
 
-
-
               {/* Marking Sheet */}
               <div className="space-y-2">
                 <Label>Marking Sheet</Label>
